@@ -1,5 +1,7 @@
 <?php
 
+use Intervention\Image\ImageManager;
+
 class Uploads {
   // Limite de tamanho do arquivo (MB)
   private $maxFileSize = 10;
@@ -177,5 +179,10 @@ class Uploads {
     $this->error = 'Não foi possível realizar o upload do arquivo.';
 
     return false;
+  }
+
+  // Cria uma thumb
+  public function createThumb($image) {
+    $manager = new ImageManager();
   }
 }
