@@ -119,6 +119,28 @@ class Uploads {
     return $errorsList[$errorCode];
   }
 
+  // Cria um diretório
+  public function createDir($path) {
+    // Cria o diretório caso o mesmo não exista
+    if (!file_exists($path)) {
+      mkdir($path, 0755, true);
+    }
+    // Verifica se o diretório foi criado e se é válido
+    if (!is_dir($path)) {
+      $this->error = 'Não foi possível criar o diretório ou o mesmo é inválido.';
+
+      return false;
+    }
+    // Verifica se o diretório possui permissão de escrita
+    if (!is_writable($path)) {
+      $this->error = 'O diretório não possui permissão de escrita.';
+
+      return false;
+    }
+
+    return true;
+  }
+
   // Verifica se o arquivo é válido
   public function isFileValid($file) {
     // Verifica se o arquivo possui algum erro
@@ -155,22 +177,11 @@ class Uploads {
     if (!$this->isFileValid($file)) {
       return false;
     }
-    // Cria o diretório caso o mesmo não exista
-    if (!file_exists($destPath)) {
-      mkdir($destPath, 0755, true);
-    }
-    // Verifica se o diretório foi criado e se é válido
-    if (!is_dir($destPath)) {
-      $this->error = 'Não foi possível criar o diretório ou o mesmo é inválido.';
-
+    // Cria o diretório
+    if (!$this->createDir($destPath)) {
       return false;
     }
-    // Verifica se o diretório possui permissão de escrita
-    if (!is_writable($destPath)) {
-      $this->error = 'O diretório não possui permissão de escrita.';
-
-      return false;
-    }
+    // Realiza o upload do arquivo
     if (move_uploaded_file($file['tmp_name'], $destPath . '/' . $fileName)) {
       $this->uploadedFile = $fileName;
 
@@ -182,7 +193,66 @@ class Uploads {
   }
 
   // Cria uma thumb
-  public function createThumb($image) {
+  public function createThumb($image, $destPath, $mode = 'crop', $width, $height, $quality = 90) {
+    // Verifica se a imagem existe
+    if (!file_exists($image)) {
+      $this->error = 'O arquivo da imagem não foi encontrado.';
+
+      return false;
+    }
+    // Informações da imagem
+    $thumbExtension = $this->getFileExtension($image);
+    $thumbName = $this->getFileName($image);
+    $thumbName = $thumbName . '.' . $thumbExtension;
+    // Instância o Intervention
     $manager = new ImageManager();
+    // Cria o objeto de imagem do Intervention
+    $thumb = $manager->make($image);
+    // Ajusta a orientação da imagem
+    $thumb->orientate();
+    // Modo recorte (Largura e Altura)
+    if ($mode == 'crop') {
+      if (!$width || !$height) {
+        $this->error = 'Dimensões inválidas para este tipo de thumbnail.';
+
+        return false;
+      }
+      $thumb->fit($width, $height);
+    }
+    // Modo redimensionamento (Seta a largura e mantém a proporção da imagem)
+    if ($mode == 'auto') {
+      if (!$width) {
+        $this->error = 'Dimensões inválidas para este tipo de thumbnail.';
+
+        return false;
+      }
+      $height = 0;
+      $thumb->widen($width);
+    }
+    // Diretório da thumb
+    $thumbPath = $destPath . '/thumb-' . $width . 'x' . $height;
+    // Cria o diretório
+    if (!$this->createDir($thumbPath)) {
+      return false;
+    }
+    // Nome completo do arquivo
+    $thumbFile = $thumbPath . '/' . $thumbName;
+    // Qualidade da imagem
+    $quality = !$quality ? 90 : $quality;
+    // Salva a imagem
+    $thumb->save($thumbFile, $quality);
+
+    return true;
+  }
+
+  // Cria uma lista de thumbs
+  public function createThumbs($image, $destPath, $thumbsList = []) {
+    foreach ($thumbsList as $thumbItem) {
+      if (!$this->createThumb($image, $destPath, $thumbItem['mode'], $thumbItem['width'], $thumbItem['height'], $thumbItem['quality'])) {
+        return false;
+      }
+    }
+
+    return true;
   }
 }

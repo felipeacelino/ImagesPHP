@@ -6,23 +6,48 @@ ini_set('display_errors', 0); */
 require 'vendor/autoload.php';
 require 'Uploads.class.php';
 
-use Intervention\Image\ImageManager;
-
 $path = dirname(__FILE__);
 $upPath = $path . '/uploads';
 $image = $path . '/image.jpg';
-$imageLg = $path . '/image_lg.jpg';
-$manager = new ImageManager();
-//$manager->make($image)->resize(300, 300)->save($upPath . '/thumb.jpg');
+
+$thumbs = [
+  [
+    'width' => 1200,
+    'height' => 0,
+    'mode' => 'auto',
+    'quality' => 100,
+  ],
+  [
+    'width' => 500,
+    'height' => 500,
+    'mode' => 'crop',
+    'quality' => 80,
+  ],
+  [
+    'width' => 150,
+    'height' => 150,
+    'mode' => 'crop',
+    'quality' => 80,
+  ],
+];
 
 $uploads = new Uploads();
 $uploads->setMaxFileSize(2);
 $uploads->setAllowedExtensions(['jpg', 'png']);
-if ($uploads->uploadFile($_FILES['foto'], $upPath)) {
+
+echo '<pre>';
+//print_r($uploads->createThumb($image, $upPath, 'auto', 1200, 0, 100));
+print_r($uploads->createThumbs($image, $upPath, $thumbs));
+//print_r($uploads->getError());
+/* print_r($uploads->createThumb($image, $upPath, 'crop', 500, 500, 80));
+print_r($uploads->createThumb($image, $upPath, 'crop', 150, 150, 80)); */
+echo '</pre>';
+
+/* if ($uploads->uploadFile($_FILES['foto'], $upPath)) {
   echo 'Success: ' . $uploads->getUploadedFile();
 } else {
   echo $uploads->getError();
-}
+} */
 
 //echo $uploads->removeFile($upPath . '/file.jpg');
 
