@@ -9,7 +9,9 @@
 
 <body>
   <form action="./upload.php" method="post" enctype="multipart/form-data">
-    <p><input type="file" name="foto"></p>
+    <p><input type="file" name="fotos[foto1]"></p>
+    <p><input type="file" name="fotos[foto2]"></p>
+    <!-- <p><input type="file" name="galeria[]" multiple></p> -->
     <button type="submit">Upload</button>
   </form>
 </body>

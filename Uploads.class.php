@@ -8,7 +8,7 @@ class Uploads {
   // Extensões permitidas
   private $allowedExtensions = [];
   // Arquivo enviado
-  private $uploadedFile;
+  private $uploadedFiles;
   // Mantém o nome original do arquivo
   private $keepFileName = false;
   // Mensagem de erro
@@ -44,8 +44,8 @@ class Uploads {
   }
 
   // Obtém o arquivo enviado (Sucesso)
-  public function getUploadedFile() {
-    return $this->uploadedFile;
+  public function getUploadedFiles() {
+    return $this->uploadedFiles;
   }
 
   // Converte o tamanho do arquivo para MB
@@ -60,6 +60,23 @@ class Uploads {
     }
 
     return false;
+  }
+
+  // Remove um arquivo de todos os diretórios
+  public function removeAllFiles($file) {
+    foreach ($this->findFiles($file) as $fileItem) {
+      $this->removeFile($fileItem);
+    }
+  }
+
+  // Retorna os arquivos procurados em um diretório
+  public function findFiles($pattern, $flags = 0) {
+    $files = glob($pattern, $flags);
+    foreach (glob(dirname($pattern) . '/*', GLOB_ONLYDIR | GLOB_NOSORT) as $dir) {
+      $files = array_merge($files, $this->findFiles($dir . '/' . basename($pattern), $flags));
+    }
+
+    return $files;
   }
 
   // Limpa o nome do arquivo
@@ -96,6 +113,17 @@ class Uploads {
     }
 
     return $out;
+  }
+
+  // Remove os itens
+  public function removeEmpty($files) {
+    foreach ($files as $fileK => $fileV) {
+      if (!$fileV['name']) {
+        unset($files[$fileK]);
+      }
+    }
+
+    return $files;
   }
 
   // Retorna a mensagem de erro
@@ -168,28 +196,34 @@ class Uploads {
   }
 
   // Realiza o upload de um arquivo
-  public function uploadFile($file, $destPath) {
-    $fileExtension = $this->getFileExtension($file['name']);
-    $fileName = $this->getFileName($file['name']);
-    $fileName = $this->keepFileName ? $this->slugFileName($fileName) : $this->generateFileName($fileName);
-    $fileName = $fileName . '.' . $fileExtension;
-    // Verifica se o arquivo é válido
-    if (!$this->isFileValid($file)) {
+  public function uploadFiles($param, $destPath) {
+    $this->uploadedFiles = [];
+    $files = $this->removeEmpty($this->normalizeArray()[$param]);
+    foreach ($files as $fileIndex => $file) {
+      $fileExtension = $this->getFileExtension($file['name']);
+      $fileName = $this->getFileName($file['name']);
+      $fileName = $this->keepFileName ? $this->slugFileName($fileName) : $this->generateFileName($fileName);
+      $fileName = $fileName . '.' . $fileExtension;
+      // Verifica se o arquivo é válido
+      if (!$this->isFileValid($file)) {
+        return false;
+      }
+      // Cria o diretório
+      if (!$this->createDir($destPath)) {
+        return false;
+      }
+      // Realiza o upload do arquivo
+      if (move_uploaded_file($file['tmp_name'], $destPath . '/' . $fileName)) {
+        $this->uploadedFiles[$fileIndex] = $fileName;
+
+        continue;
+      }
+      $this->error = 'Não foi possível realizar o upload do arquivo.';
+
       return false;
     }
-    // Cria o diretório
-    if (!$this->createDir($destPath)) {
-      return false;
-    }
-    // Realiza o upload do arquivo
-    if (move_uploaded_file($file['tmp_name'], $destPath . '/' . $fileName)) {
-      $this->uploadedFile = $fileName;
 
-      return true;
-    }
-    $this->error = 'Não foi possível realizar o upload do arquivo.';
-
-    return false;
+    return true;
   }
 
   // Cria uma thumb
